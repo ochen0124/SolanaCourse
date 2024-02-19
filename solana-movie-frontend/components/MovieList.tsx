@@ -1,14 +1,25 @@
 import { Card } from './Card'
 import { FC, useEffect, useState } from 'react'
 import { Movie } from '../models/Movie'
+import * as web3 from "@solana/web3.js"
+import { useConnection } from "@solana/wallet-adapter-react"
 
 const MOVIE_REVIEW_PROGRAM_ID = 'CenYq6bDRB7p73EjsPEpiYN7uveyPUTdXkDkgUduboaN'
 
 export const MovieList: FC = () => {
-    const [movies, setMovies] = useState<Movie[]>([])
+    const { connection } = useConnection();
+    const [movies, setMovies] = useState<Movie[]>([]);
+    const MOVIE_REVIEW_PROGRAM_ID_PK = new web3.PublicKey(MOVIE_REVIEW_PROGRAM_ID);
 
     useEffect(() => {
-        setMovies(Movie.mocks)
+        connection.getProgramAccounts(MOVIE_REVIEW_PROGRAM_ID_PK).then(async (accounts) => {
+            const movies: Movie[] = accounts.map(({account}) => {
+                return Movie.deserialize(account.data)
+            })
+
+            setMovies(movies);
+        })
+
     }, [])
     
     return (

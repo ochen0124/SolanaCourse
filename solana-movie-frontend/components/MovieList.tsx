@@ -13,8 +13,8 @@ export const MovieList: FC = () => {
 
     useEffect(() => {
         connection.getProgramAccounts(MOVIE_REVIEW_PROGRAM_ID_PK).then(async (accounts) => {
-            const movies: Movie[] = accounts.map(({account}) => {
-                return Movie.deserialize(account.data)
+            const movies: Movie[] = accounts.map(accountItem => {
+                return Movie.deserialize(accountItem.account.data)
             })
 
             setMovies(movies);

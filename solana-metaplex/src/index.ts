@@ -6,6 +6,7 @@ import {
   bundlrStorage,
   toMetaplexFile,
   NftWithToken,
+  Nft,
 } from "@metaplex-foundation/js"
 import * as fs from "fs"
 
@@ -36,13 +37,21 @@ const updateNftData = {
 }
 
 async function main() {
-  // create a new connection to the cluster's API
-  const connection = new Connection(clusterApiUrl("devnet"))
+  const connection = new Connection(clusterApiUrl("devnet"));
 
-  // initialize a keypair for the user
-  const user = await initializeKeypair(connection)
+  const user = await initializeKeypair(connection);
+  console.log("PublicKey:", user.publicKey.toBase58());
 
-  console.log("PublicKey:", user.publicKey.toBase58())
+  // set up metaplex
+  const metaplex = Metaplex.make(connection)
+    .use(keypairIdentity(user))
+    .use(
+      bundlrStorage({
+        address: "https://devnet.bundlr.network",
+        providerUrl: "https://api.devnet.solana.com",
+        timeout: 60000
+      })
+    );
 }
 
 main()
@@ -54,3 +63,25 @@ main()
     console.log(error)
     process.exit(1)
   })
+
+async function uploadMetaData(
+  metaplex: Metaplex,
+  nftData: NftData
+): Promise<string> {
+  const buffer = fs.readFileSync("src/" + nftData.imageFile);
+
+  const file = toMetaplexFile(buffer, nftData.imageFile);
+
+  const imageUri = await metaplex.storage().upload(file);
+  console.log("image uri:", imageUri);
+
+  const { uri } = await metaplex.nfts().uploadMetadata({
+    name: nftData.name,
+    symbol: nftData.symbol,
+    description: nftData.description,
+    image: imageUri
+  });
+
+  console.log("metadata uri:", uri);
+  return uri;
+}

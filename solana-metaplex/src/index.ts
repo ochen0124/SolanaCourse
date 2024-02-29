@@ -1,5 +1,5 @@
 import { initializeKeypair } from "./initializeKeypair"
-import { Connection, clusterApiUrl, PublicKey } from "@solana/web3.js"
+import { Connection, clusterApiUrl, PublicKey, Keypair } from "@solana/web3.js"
 import {
   Metaplex,
   keypairIdentity,
@@ -16,6 +16,16 @@ interface NftData {
   description: string
   sellerFeeBasisPoints: number
   imageFile: string
+}
+
+interface CollectionNftData {
+  name: string
+  symbol: string
+  description: string
+  sellerFeeBasisPoints: number
+  imageFile: string
+  isCollection: boolean
+  collectionAuthority: Keypair
 }
 
 // example data for a new NFT
@@ -53,10 +63,37 @@ async function main() {
       })
     );
 
+  const collectionNftData = {
+    name: "MyTestCollectionNFT",
+    symbol: "TOLY",
+    description: "Test Description Collection Named TOLY",
+    sellerFeeBasisPoints: 100,
+    imageFile: "success.png",
+    isCollection: true,
+    collectionAuthority: user
+  };
+
+  // upload nft collection uri
+  const collectionUri = await uploadMetaData(metaplex, collectionNftData);
+
+  // create nft collection
+  const NftCollection = await createNftCollection(
+    metaplex,
+    collectionUri,
+    collectionNftData
+  );
+
   // upload nft and get off chain metadata uri
   const uri = await uploadMetaData(metaplex, nftData);
+
   // create nft 
-  const nft = await createNFT(metaplex, uri, nftData);
+  const nft = await createNFT(metaplex, uri, nftData, NftCollection);
+
+  // upload updated nft and get off chain metadata uri
+  const updatedUri = await uploadMetaData(metaplex, updateNftData);
+
+  // update created nft
+  await updateNftUri(metaplex, updatedUri, nft.address);
 }
 
 main()
@@ -94,14 +131,16 @@ async function uploadMetaData(
 async function createNFT(
   metaplex: Metaplex,
   uri: string,
-  nftData: NftData
+  nftData: NftData,
+  collection: NftWithToken
 ): Promise<NftWithToken> {
   const { nft } = await metaplex.nfts().create(
     {
       uri: uri,
       name: nftData.name,
       sellerFeeBasisPoints: nftData.sellerFeeBasisPoints,
-      symbol: nftData.symbol
+      symbol: nftData.symbol,
+      collection: collection.address
     },
     { commitment: "finalized" }
   );
@@ -110,5 +149,58 @@ async function createNFT(
     `Token Mint: https://explorer.solana.com/address/${nft.address.toString()}?cluster=devnet`
   );
 
+  await metaplex.nfts().verifyCollection({
+    mintAddress: nft.mint.address,
+    collectionMintAddress: collection.address,
+    isSizedCollection: true
+  });
+
   return nft;
+}
+
+async function updateNftUri(
+  metaplex: Metaplex,
+  uri: string,
+  mintAddress: PublicKey
+) {
+  const nft = await metaplex.nfts().findByMint({ mintAddress });
+
+  const { response } = await metaplex.nfts().update(
+    {
+      nftOrSft: nft,
+      uri: uri
+    },
+    { commitment: "finalized"}
+  );
+
+  console.log(
+    `Token Mint: https://explorer.solana.com/address/${nft.address.toString()}?cluster=devnet`
+  );
+
+  console.log(
+    `Transaction: https://explorer.solana.com/tx/${response.signature}?cluster=devnet`
+  );
+}
+
+async function createNftCollection(
+  metaplex: Metaplex,
+  uri: string,
+  data: CollectionNftData
+): Promise<NftWithToken> {
+  const { nft } = await metaplex.nfts().create(
+    {
+      uri: uri,
+      name: data.name,
+      sellerFeeBasisPoints: data.sellerFeeBasisPoints,
+      symbol: data.symbol,
+      isCollection: true
+    },
+    { commitment: "finalized" }
+  );
+
+  console.log(
+    `Collection Mint: https://explorer.solana.com/address/${nft.address.toString()}?cluster=devnet`
+  );
+
+  return nft
 }

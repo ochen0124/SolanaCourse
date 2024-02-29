@@ -52,6 +52,11 @@ async function main() {
         timeout: 60000
       })
     );
+
+  // upload nft and get off chain metadata uri
+  const uri = await uploadMetaData(metaplex, nftData);
+  // create nft 
+  const nft = await createNFT(metaplex, uri, nftData);
 }
 
 main()
@@ -84,4 +89,26 @@ async function uploadMetaData(
 
   console.log("metadata uri:", uri);
   return uri;
+}
+
+async function createNFT(
+  metaplex: Metaplex,
+  uri: string,
+  nftData: NftData
+): Promise<NftWithToken> {
+  const { nft } = await metaplex.nfts().create(
+    {
+      uri: uri,
+      name: nftData.name,
+      sellerFeeBasisPoints: nftData.sellerFeeBasisPoints,
+      symbol: nftData.symbol
+    },
+    { commitment: "finalized" }
+  );
+
+  console.log(
+    `Token Mint: https://explorer.solana.com/address/${nft.address.toString()}?cluster=devnet`
+  );
+
+  return nft;
 }

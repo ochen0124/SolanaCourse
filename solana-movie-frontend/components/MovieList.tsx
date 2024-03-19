@@ -6,7 +6,7 @@ import * as web3 from "@solana/web3.js"
 import { useConnection } from "@solana/wallet-adapter-react"
 import { Center, HStack, Button, Spacer, Input } from "@chakra-ui/react"
 
-const MOVIE_REVIEW_PROGRAM_ID = 'CenYq6bDRB7p73EjsPEpiYN7uveyPUTdXkDkgUduboaN'
+const MOVIE_REVIEW_PROGRAM_ID = 'GUCuh8kybxSkgrACtbafHpc6woK6SyxqSWFy9fSP4JuK'
 
 export const MovieList: FC = () => {
     const MOVIE_REVIEW_PROGRAM_ID_PK = new web3.PublicKey(MOVIE_REVIEW_PROGRAM_ID);
